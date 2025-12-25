@@ -1,4 +1,18 @@
 from math import sqrt
+import random
+import zipfile
+import os
+
+print("Made by sammyuri and GDPowerTrip (discord power_trip_gd)")
+print("Loading A.I...")
+
+zip_path = "weights.zip"
+dir_path = os.path.dirname(zip_path)
+
+with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+    zip_ref.extractall(dir_path)
+
+os.remove(zip_path)
 
 LAYERS = 6
 HEADS = 5
@@ -20,8 +34,6 @@ ATT_CONST = int((1 << 26) / sqrt(EMBED_SIZE))  # 4331858
 
 EPS = int(1e-5 * EMBED_SIZE * (1 << (2 * MATMUL_FIXED_POINT)))
 
-
-# debugging utils
 def print_weights(weights, name="weights/expect_output.txt"):
     with open(name, "w") as f:
         for i in range(len(weights)):
@@ -44,7 +56,6 @@ def set_input(weights):
         for i in range(len(weights)):
             f.write(weights[i].to_bytes(3, byteorder="little"))
     print_weights(weights, "weights/input.txt")
-
 
 
 class MatMul:
@@ -510,32 +521,34 @@ def run_model():
             tokens.append(line.strip())
     conversation = []
     model = Model()
-    seed = int(input("Enter RNG seed, or -1 to view next token probability distribution: "))
-    rng = PRNG(seed)
+    rng = PRNG(random.randint(1, 999999999))
     while True:
         prompt = get_prompt(tokens)
         conversation.extend(prompt + [1])
         for token in prompt:
-            print(f"Processing token '{tokens[token]}'")
+            if "inst]" not in tokens[token]:
+                print(f"Processing word '{tokens[token].replace('_','')}'")
+            else:
+                if tokens[token] == "_[inst]":
+                    print("Processing instruction...")
+                elif tokens[token] == "_[/inst]":
+                    print("Generating response...")
+                else:
+                    print("Processing...")
             assert(0 <= token < 1920)
             model.process(token)
-        if seed == -1:
-            nxt = 1
-            while True:
-                print(f"Processing token '{tokens[nxt]}'")
-                ans = model.process(nxt)
-                for i in range(8):
-                    token = ans[i] & 2047
-                    prob = ans[i] >> 11
-                    print(f"{i + 1}: {str(token).rjust(4)}, probability {str(round(prob / (1 << 23) * 100000) / 100000).ljust(7, '0')}, {tokens[token]}")
-                nxt = int(input("Enter next token ID: "))
-                if nxt == 0 or nxt == 1:
-                    break
-                conversation.append(nxt)
         else:
             nxt = 1
             while True:
-                print(f"Processing token '{tokens[nxt]}'")
+                if "inst]" not in tokens[nxt]:
+                    print(f"Processing word '{tokens[nxt].replace('_','')}'")
+                else:
+                    if tokens[nxt] == "_[inst]":
+                        print("Processing instruction...")
+                    elif tokens[nxt] == "_[/inst]":
+                        print("Generating response...")
+                    else:
+                        print("Processing...")
                 act = model.process(nxt)
                 cur = rng.next()
                 here = -1
@@ -552,9 +565,12 @@ def run_model():
                     break
                 conversation.append(here)
                 nxt = here
-        print("".join(list(map(lambda f: tokens[f], conversation))).replace("_", " "))
-
-
+        text = "".join(tokens[f] for f in conversation)
+        pos = text.rfind("_[/inst]")
+        if pos != -1:
+            text = text[pos + len("_[/inst]"):]
+        text = text.replace("_", " ")
+        print(text)
 
 if __name__ == "__main__":
     run_model()
