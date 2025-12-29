@@ -8,4 +8,4 @@ A small language model **originally made by [@sammyuri](https://www.github.com)*
 I have made this A.I. a bit easier to use, and added some QoL changes.
 The original project is called CraftGPT by sammyuri.
 
-I have disabled funding specifically for this project, because I don't want to get sued by sammyuri.
+###### I have disabled funding specifically for this project, because I don't want to get sued by sammyuri.
